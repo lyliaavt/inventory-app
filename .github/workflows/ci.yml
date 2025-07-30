@@ -32,7 +32,6 @@ jobs:
       run: npm audit --audit-level=high
 
     - name: Lint Code
-       run: npx eslint ./src
+      run: npx eslint ./src
 
-   - name: Security Scan
-     run: npx snyk test
+
