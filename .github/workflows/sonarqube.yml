@@ -1,5 +1,5 @@
-# .github/workflows/sonarqube.yml
 name: SonarQube Analysis
+
 on:
   push:
     branches: [ main, develop ]
@@ -9,31 +9,49 @@ on:
 jobs:
   sonarqube:
     runs-on: ubuntu-latest
+
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v3
       with:
         fetch-depth: 0
-        
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: 3.9
-        
-    - name: Install dependencies
+        python-version: '3.9'
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20'
+
+    - name: Install Python dependencies
       run: |
         pip install -r requirements.txt
-        pip install pylint coverage pytest-cov
-        
-    - name: Run tests with coverage
-      run: |
-        pytest --cov=src --cov-report=xml --cov-report=html
-        
-    - name: Run Pylint
-      run: |
-        pylint src/ --output-format=parseable --reports=no > pylint-report.txt || true
-        
-    - name: SonarQube Scan
-      uses: sonarqube-quality-gate-action@master
+        pip install pylint coverage pytest pytest-cov
+
+    - name: Install Node.js dependencies
+      run: npm install
       env:
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }} 
+        HUSKY_SKIP_INSTALL: 1
+
+    - name: Run tests & generate coverage report
+      run: pytest --cov=src --cov-report=xml --cov-report=html
+
+    - name: Run Pylint & generate report
+      run: pylint src/ --output-format=parseable --reports=no > pylint-report.txt || true
+
+    - name: SonarQube Scan
+      uses: sonarsource/sonarqube-scan-action@v2.1.0
+      with:
+        args: >
+          -Dsonar.projectKey=technova-inventory
+          -Dsonar.projectName="TechNova Inventory Management"
+          -Dsonar.projectVersion=1.0
+          -Dsonar.sources=src
+          -Dsonar.tests=tests
+          -Dsonar.python.coverage.reportPaths=coverage.xml
+          -Dsonar.python.pylint.reportPaths=pylint-report.txt
+          -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }}
+          -Dsonar.login=${{ secrets.SONAR_TOKEN }}
